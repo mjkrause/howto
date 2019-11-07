@@ -2,7 +2,9 @@
 
 ## Installation
 
+```bash
 curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+```
 
 ### Node.js
 ```bash
@@ -19,7 +21,7 @@ curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.34.0/install.sh | b
 
 ```bash
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 nvm install node
