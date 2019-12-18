@@ -784,3 +784,28 @@ Suppose we want all lines which start with exactly two whitespaces (e.g., this c
 ```bash
 in_file=$( perl -ne 'print if /^\s{2}(?!\s)/' filename.txt) 
 ```
+
+## JavaScript, Node.js, and TypeScript
+
+### Developing inside a running Docker container
+
+This set of instructions is specific to developing an app created with Strongloop's Loopback.
+
+Suppose you have a Docker container or a Docker-compose script which launches multiple containers, and you would like to develop the code-base while your code is running inside the container (and the container(s) could run on localhost or remotely). This can be done with VS Code. 
+
+1. Launch VS Code (`code .` inside the directory that contains the code-base opens the IDE). Install the `Remote Explorer` extension.
+2. Navigate to the directory containing the code-base, including the `Dockerfile` or the `docker-compose` file. Launch the container(s).
+3. In VS Code, click on the Remote Explorer icon (on the left side of the window by default). You should see the container(s) listed. Pick the one that contains the code you want to develop, and connect to it.
+4. Hover the container of interest, right mouse button, and click on `Connect to Container`. That action opens another VS Code editor which shows the content of the container. Navigate to the directory holding the code. Also, you should see a green bar on the lower left side of the screen that should something like `Container ...` describing the name of the container.
+
+Now you're connected to the container, and can edit the code inside the running container.
+
+### Debugging Node.js code
+
+Suppose you have a Node.js application running as a backend to some frontend. You would like to exercise some code in the backend that is called by some HTTP method in the front end. 
+
+1. Set a breakpoint at some line where you want the debugger to stop. Next hit `F5` or navigate to menu `Debug` -> `Start Debugging`. In the debugger tab you should see that the debugger has attached to some process.
+
+2. Identify the endpoint that invokes the Node.js backend method and create a HTTP request. In a terminal run `curl <METHOD> http://myendpoint.org`.
+
+3. The debugger should stop at the first breakpoint it passes, i.e., the red dot should be framed with a yellow arrow. Use `F10` and other keys to inspect variables and call stack. Et voila...
