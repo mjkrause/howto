@@ -793,12 +793,15 @@ This set of instructions is specific to developing an app created with Strongloo
 
 Suppose you have a Docker container or a Docker-compose script which launches multiple containers, and you would like to develop the code-base while your code is running inside the container (and the container(s) could run on localhost or remotely). This can be done with VS Code. 
 
-1. Launch VS Code (`code .` inside the directory that contains the code-base opens the IDE). Install the `Remote Explorer` extension.
+1. Launch VS Code (`code .`) inside the directory that contains the code-base opens the IDE. Then click the extensions icon, and and find and install the `Remote Explorer` extension.
 2. Navigate to the directory containing the code-base, including the `Dockerfile` or the `docker-compose` file. Launch the container(s).
-3. In VS Code, click on the Remote Explorer icon (on the left side of the window by default). You should see the container(s) listed. Pick the one that contains the code you want to develop, and connect to it.
-4. Hover the container of interest, right mouse button, and click on `Connect to Container`. That action opens another VS Code editor which shows the content of the container. Navigate to the directory holding the code. Also, you should see a green bar on the lower left side of the screen that should something like `Container ...` describing the name of the container.
+3. In VS Code, click on the Remote Explorer icon (on the left side of the window by default). You should see the container(s) listed. Pick the one that contains the code you want to develop, and connect to it as described in the next step.
+4. Hover over the container of interest. Use the right mouse button and click on `Connect to Container`. That action opens another VS Code editor which shows the content of the container. Navigate to the directory holding the code. Also, you should see a green bar on the lower left side of the screen that say should something like `Container ...` describing the name of the container.
 
-Now you're connected to the container, and can edit the code inside the running container.
+Now you're connected to the container, and can edit the code inside the running container. Upon saving the file in which we made a change it should automatically re-compile the code, and effects should take effect immediately. 
+
+#### View the log-file as it compiles
+Go to the Remote Explorer (left side panel in GUI). It should show all containers. Hover over the container that is attached and in which you want to edit the code. Click on it with the right mouse button and select `Show container log`. In console (at the bottom of the GUI) click on tab _Terminal_. Now go to the upper right corner of the terminal. There should be a pull-down menu. Select the name of the container. The terminal should now show the output of the log file of the running container. So if you edit code and hit _save_ it should show that the code recompiles.
 
 ### Debugging Node.js code
 
