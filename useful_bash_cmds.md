@@ -195,25 +195,42 @@ If you check again for remote branches you should not see the current status of 
 
 ### Squashing commit messages when `Squash and merge` isn't made available in repo
 
-To squash multiple commmits into a single commit first get an estimate on how many commits are affected. In the GitHub UI that number shows up in the tab. Suppose it's 64. In that case do
+This describes the action of squashing multiple commmits into a single commit. First get an estimate on how many commits are affected. In the GitHub UI that number shows up in the tab. Look at the commit log to figure out the first (i.e., oldest) commit that should be included in the squashing action. Strategies to find that first commit include reading the log (`git log`, perhaps with the `--pretty=oneline` option) and identify the number. Once found, verify that number by Suppose it's 64. In that case do
 
 ```bash
-git rebase -i HEAD~70
+git rebase -i HEAD~64
 ```
-where `-i` stands for _interactive_. That command opens the editor (in our case emacs) that contains your last 70 commits to that branch, in the time-ascending order (so the last commit is at the end of that list). Each line in that document is prefixed with `pick`. Find the first commit where you want to start squashing. Leave this line alone, and start replacing `pick` with `s` in each other line to the last line of the commits.
+where `-i` stands for _interactive_. That command opens the editor (e.g., emacs) that contains your last 64 commits to that branch, in the time-ascending order (so the last commit is at the end of that list). Each line in that document is prefixed with `pick`. Find the first commit where you want to start squashing (should be the first line). Leave this line alone, and start replacing `pick` with `s` in each other line to the last line of the commits.
 
-Save the file and close it. This will open a second editor window with the commit messages and some other information. Delete the entire content and replace by the commit message for the squashed commit. Save and close.
+Save the file and close it. This will open a second editor window with all commit messages and some other information. Delete the entire content and replace by the commit message for the squashed commit. Save and close.
 
 Now the local copy of the branch will differ from the remote copy. Therefore you need to force the push like so
 ```bash
 git push origin feature/my-branch --force
 ```
 
-The push copies your local branch into the remote repository. It is good practice to create a test branch, and perform the above steps on it. Suppose that branch is called `delme`. Once done with the process on `delme` do
+`push` copies your local branch into the remote repository. It is good practice to create a test branch, and perform the above steps on it. Suppose that branch is called `delme`. Once done with the process on `delme` do
 ```bash
-git diff feature/my-branch delme
+git diff feature/my-branch my-original-branch
 ```
 to see the difference between the two branches.
+
+#### How to save the day when things went wrong...
+You can save the day in multiple stages. After issueing the `git rebase -i HEAD~<some number>` and you think you made a mistake you can delete the content of the file, save it, and close the editor. That should output `Nothing to do` in the terminal.
+
+If the original state of the branch (i.e., the state before you started the rebase) you are working on has been pushed to the remote already, but hasn't been pushed following the rebase you restore the original state in the local branch using one of two strategies:
+
+1. you reset the local branch to the state of the remote branch by 
+```bash
+git reset --hard origin/mkrause/branchname
+```
+
+2. you delete the local branch and checkout the remote branch
+```bash
+git branch -D branchname
+git checkout remote/branchname
+git branch branchname
+```
 
 ### Using `git apply`
 
