@@ -56,11 +56,23 @@ Search recursively through all files that end on `py` or `sh`,
 
 ## Git and GitHub
 
-Create a new branch on local `feature/mjkrause`.
+Create a new branch on local `my-name/my-feature`.
 ```bash
 git branch feature/mjkrause
 git checkout feature/mjkrause
 ```
+
+### You create a branch and committed to remote on one machine, now you want to work on it on a different machine
+
+Suppose you create a branch in a repo on your local machine at work. At home you want to keep working in that branch, you clone the repo. And now comes the significant bit: don't just `git checkout _branch-name_` as that would result in a detached HEAD state and you wouldn't be able to commit to that branch. Instead execute
+```bash
+git branch --track branch-name origin/branch-name
+```
+That should return a message saying that you now track that branch from origin. Follow up with a `git branch` and you should see _branch-name_ listed. If you now 
+```bash
+git checkout branch-name
+```
+it should return a message saying that you switched to that branch and that it is up to date. You can start coding and committing to that branch now.
 
 ### You wish to know the Git root directory name (the one which contains the file `.git`). 
 This likely is the name of the repository it was cloned from.
