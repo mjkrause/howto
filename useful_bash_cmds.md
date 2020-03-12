@@ -112,6 +112,7 @@ a -- b -- c        d             develop
 
 First, checkout out develop and make sure that your version (local) is the same as the remote (origin) version. Run `git status` and look for the message _your\_branch_ is up-to-date with _origin/your\_branch_. If not, make it so by
 ```bash
+git fetch origin
 git reset --hard origin/develop
 ```
 
@@ -195,12 +196,12 @@ If you check again for remote branches you should not see the current status of 
 
 ### Squashing commit messages when `Squash and merge` isn't made available in repo
 
-This describes the action of squashing multiple commmits into a single commit. First get an estimate on how many commits are affected. In the GitHub UI that number shows up in the tab. Look at the commit log to figure out the first (i.e., oldest) commit that should be included in the squashing action. Strategies to find that first commit include reading the log (`git log`, perhaps with the `--pretty=oneline` option) and identify the number. Once found, verify that number by Suppose it's 64. In that case do
+This describes the action of squashing multiple commmits into a single commit. First get an estimate on how many commits are affected. In the GitHub UI that number shows up in the tab. Look at the commit log to figure out the first (i.e., oldest, usually the first commit in that branch after you branched off of, for instance, `develop`) commit that should be included in the squashing action. Strategies to find that first commit include reading the log (`git log`, perhaps with the `--pretty=oneline` option) and identify the number. Once found, verify that number. Suppose it's 64. In that case do
 
 ```bash
 git rebase -i HEAD~64
 ```
-where `-i` stands for _interactive_. That command opens the editor (e.g., emacs) that contains your last 64 commits to that branch, in the time-ascending order (so the last commit is at the end of that list). Each line in that document is prefixed with `pick`. Find the first commit where you want to start squashing (should be the first line). Leave this line alone, and start replacing `pick` with `s` in each other line to the last line of the commits.
+where `-i` stands for _interactive_. That command opens the editor (e.g., emacs) that contains your last 64 commits to that branch, in the time-ascending order (so the last commit is at the end of that list). Each line in that document is prefixed with `pick`. Find the first commit where you want to start squashing (should be the first line if counted correctly). Leave this line alone, and start replacing `pick` with `s` in each other line to the last line of the commits.
 
 Save the file and close it. This will open a second editor window with all commit messages and some other information. Delete the entire content and replace by the commit message for the squashed commit. Save and close.
 
@@ -213,7 +214,7 @@ git push origin feature/my-branch --force
 ```bash
 git diff feature/my-branch my-original-branch
 ```
-to see the difference between the two branches.
+to see the difference between the two branches. Only make sure that before you start working on the actual branch to reset to the state of the remote, and to delete the test branch.
 
 #### How to save the day when things went wrong...
 You can save the day in multiple stages. After issueing the `git rebase -i HEAD~<some number>` and you think you made a mistake you can delete the content of the file, save it, and close the editor. That should output `Nothing to do` in the terminal.
@@ -267,6 +268,54 @@ Now suppose you want to copy the file you extracted above to the local server
 rsync -avz username@server:/home/username/foo/bar/baz/root/files/foo/bar/myarchive.gz .
 ```
 So again, you need to use the complete path information of the file (i.e., the location to which you wrote it to in the above step).
+
+## `cron` and `crontab`
+
+The UNIX / Linux scheduler can be tricky. For instance, a script that runs just fine in a terminal may not run in the same way in `crontab`. Some things need to be taken care of beforehand.
+
+Suppose you want to schedule running a shell script, and suppose your script relies on a bunch of environment variables, and perhaps some other utilities, such `jq`. This requires some extra work.
+
+Start out by creating a simple schedule that runs every minute, such as 
+```bash
+* * * * * env > /tmp/my.env
+```
+That writes the environment variables into the file in the temporary directory. Run `tail -f /tmp/my.env`: you see that there's isn't much. So if you need some environment variables you best have them saved in a file (e.g., `.env`) in the project root or somewhere and source them. 
+
+The cron shell isn't an interactive shell or a login shell. It doesn't run `bash` neither. So to make understand bash commands paste the following on top of the cron file. Open the cron file with `$ crontab -e` (should open in your favorite editor). The paste something like
+```bash
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/path/to/your/script:/snap/bin
+SCRIPT_DIR=/path/to/your/script/
+```
+The first line makes bash the default shell to execute commands in that file. Then run `echo $PATH` in a terminal, and take the output from it to paste it here. If cron needs to find executables, say `jq`, run `$ which jq`, and add the output to `PATH`. 
+
+The shell cron uses is the Bourne shell, and it uses `sh` to execute commands, but I think it's easier to just use bash instead.
+
+In the actual cron scheduling command 
+```bash
+# Run every day at midnight.
+0 0 * * * . $SCRIPT_DIR/.env && cd $SCRIPT_DIR && my_awesome_script.sh $ARG1 $ARG2 $ARG3 > /dev/null 2>&1
+```
+Perhaps you run that script using `.` or `source` in a terminal. Here in `crontab` that's not necessary. `$ARG1 $ARG2 $ARG3` are assumed to have been loaded by loading `.env`. Redirect the output to standard error, unless you want cron to email it to somewhere (which requires setting up some mail service). When done, save the file and close the editor. The cron job should run immediately.
+
+There are several ways to monitor what's happening in the cron job. One is
+```bash
+sudo grep -i cron /var/log/syslog`
+```
+is one. Next, check 
+```bash
+sudo systemctl status cron
+```
+But it is best to enable output to `cron.log` to monitor only cron-related messages.
+```bash
+sudo vi /etc/rsyslog.d/50-default.conf
+```
+In that file uncomment the line
+```bash
+#cron.*   /var/log/cron.log
+```
+and monitor it by `sudo tail -f /var/log/cron.log`. 
+
 
 ## Using `jq`
 You can always use `set x` in any bash script to show on standard out what the script executes. Here I use the `jq` (not installed by default) to substitute a value in a JSON file `config.json`. We first need to copy the command into a temporary file, and then move it to the actual file. Copy this line into a bash script and execute it with a desired value as argument.
