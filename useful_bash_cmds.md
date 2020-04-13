@@ -293,13 +293,13 @@ Start out by creating a simple schedule that runs every minute, such as
 ```
 That writes the environment variables into the file in the temporary directory. Run `tail -f /tmp/my.env`: you see that there's isn't much. So if you need some environment variables you best have them saved in a file (e.g., `.env`) in the project root or somewhere and source them. 
 
-The cron shell isn't an interactive shell or a login shell. It doesn't run `bash` neither. So to make understand bash commands paste the following on top of the cron file. Open the cron file with `$ crontab -e` (should open in your favorite editor). The paste something like
+The cron shell isn't an interactive shell or a login shell. Neither does it run `bash`. So to make bash commands have effects, paste the following on top of the cron file. Open the cron file with `$ crontab -e` (should open in your favorite editor). The paste something like
 ```bash
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/path/to/your/script:/snap/bin
 SCRIPT_DIR=/path/to/your/script/
 ```
-The first line makes bash the default shell to execute commands in that file. Then run `echo $PATH` in a terminal, and take the output from it to paste it here. If cron needs to find executables, say `jq`, run `$ which jq`, and add the output to `PATH`. 
+The first line makes bash the default shell to execute commands in that file. To find out what `PATH` should contain, run `echo $PATH` in a terminal and copy the output from it to paste it into the crontab file. If cron needs to find executables, say `jq`, run `$ which jq`, and add the output to `PATH`. 
 
 The shell cron uses is the Bourne shell, and it uses `sh` to execute commands, but I think it's easier to just use bash instead.
 
@@ -310,27 +310,78 @@ In the actual cron scheduling command
 ```
 Perhaps you run that script using `.` or `source` in a terminal. Here in `crontab` that's not necessary. `$ARG1 $ARG2 $ARG3` are assumed to have been loaded by loading `.env`. Redirect the output to standard error, unless you want cron to email it to somewhere (which requires setting up some mail service). When done, save the file and close the editor. The cron job should run immediately.
 
-There are several ways to monitor what's happening in the cron job. One is
-```bash
-sudo grep -i cron /var/log/syslog`
-```
-is one. Next, check 
+### Logging cron jobs
+
+First, convince yourself that `cron` is running at all by 
 ```bash
 sudo systemctl status cron
 ```
-But it is best to enable output to `cron.log` to monitor only cron-related messages.
+or `sudo service cron status`. If it is running there are several ways to monitor what's happening in the cron job. One way is
+```bash
+sudo grep -i cron /var/log/syslog`
+```
+is one. But it is best to enable output to `cron.log` to monitor only cron-related messages. To this open
 ```bash
 sudo vi /etc/rsyslog.d/50-default.conf
 ```
-In that file uncomment the line
+and uncomment the line
 ```bash
 #cron.*   /var/log/cron.log
 ```
 and monitor it by `sudo tail -f /var/log/cron.log`. 
 
+### Using cron jobs in Docker containers
+
+Using one container to run a cron job is probably the best. Running more than one job in a Docker container is an anti-pattern, and doesn't follow the best practice of running on job per container. But sometimes it is the easiest. 
+
+How to configure the crontab file in a container depends on the base image. For instance, if the base image is slim, stretch, alpine, etc, so not a full-blown OS, `cron` isn't even installed. So you need to install it with
+
+```bash
+.
+.
+.
+RUN apt-get update -qq \
+  && apt-get install -qq \
+    cron rsyslog \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+.
+.
+.
+```
+and probably a bunch of other packages as well. Have the crontab file (e.g. `docker_crontab_file`) reside in the same directory as the Dockerfile. Then
+
+```bash
+ADD docker_crontab_file /etc/cron.d/some_cron
+RUN chmod 0600 /etc/cron.d/some_cron
+RUN crontab -u root /etc/cron.d/some_cron
+```
+The first command adds that file to a directory (which it creates) in the container. The second line sets permissions to `rw` for the owner. The file permissions for the crontab file could be critical.
+
+Most importantly in the third line we specify that `root` will be using that crontab file we add to `cron.d`. In my case I also specified the user in the actual command of the crontab file, like so 
+```bash
+* * * * * root env > /var/log/cron.log 2>&1
+```
+In this case we're writing the environment variables that cron sees into a log file. Once you redirect the output to cron.log you don't need to create that file explicitly. 
+Once you've build and run your docker container, go inside the container and run `service cron status` to check of cron is running. If not, you can start it, for instance, by typing `cron`. The brings me to another important debugging technique: logging. It might be a good idea to install package `rsyslog` to Dockerfile, at least during the development phase (and if things to work out of the box). The creates system logs to which cron writes. Then, inside a running container, you can output cron's log message by 
+
+```bash
+rsyslogd
+tail --follow /var/log/syslog
+```
+
+Those log messages can contain valueable information if things to go as expected.
+
+Lastly, we need to start cron upon container start:
+```bash
+CMD cron && my-awesome-executable
+```
+
+
 
 ## Using `jq`
-You can always use `set x` in any bash script to show on standard out what the script executes. Here I use the `jq` (not installed by default) to substitute a value in a JSON file `config.json`. We first need to copy the command into a temporary file, and then move it to the actual file. Copy this line into a bash script and execute it with a desired value as argument.
+You can always use `set x` in any bash script to show on standard 
+out what the script executes. Here I use the `jq` (not installed by default) to substitute a value in a JSON file `config.json`. We first need to copy the command into a temporary file, and then move it to the actual file. Copy this line into a bash script and execute it with a desired value as argument.
 Use a temporary variable in order to do in-place editing.
 ```bash
 tmp=$(mktemp)
@@ -451,10 +502,9 @@ sudo docker logs -f name_of_container
 
 ## Stop containers from running
 
-```bash
-docker kill <image_id>
-```
-(likely you need to run the above command using `sudo`) Instead of `<image_id>` you can use command substitution `$(sudo docker ps -q)` (which prints a list of image IDs only) to loop over all containers images. Besides, this technique can be used for any of the other docker commands in this paragraph.
+Use `docker stop <name-of-container>` to stop a running container (run `docker ps` to find out the name). Alternatively, you can use `docker kill <name-of-container>` (the former sends a SIGTERM followed by a SIGKILL, the latter sends a SIGKILL immediately).
+
+Instead of `<name-of-container>` you can use command substitution `$(sudo docker ps -q)` (which prints a list of container IDs only) to loop over all containers. Identifying containers this waye can be used for any of the other docker commands in this paragraph.
 
 ## Remove (delete) all containers
 ```bash
