@@ -42,6 +42,21 @@ sudo apt-clone restore-new-distro path-to/apt-clone-state-ubuntu.tar.gz $(lsb_re
 
 The home directory contains a lot of settings, data, perhaps executables, code, etc. WIP
 
+## Create file names with numbered postfixes, padded with zeros
+
+Suppose you want to generate directories \textit{module01, module02, ..., module 13, module14, ... module99}. 
+
+```bash
+for k in $(seq -f "%02g" 2 99); 
+do 
+mkdir -p "module$k"; 
+done
+```
+This is from [this](https://stackoverflow.com/questions/8789729/how-to-zero-pad-a-sequence-of-integers-in-bash-so-that-all-have-the-same-width) Stackoverflow stub. Instead of using the `-f` flag, which requires a formatting specification, we can use the `-w` flag, which will pad to the largest (i.e., widest) number in the sequence automatically.
+
+```bash
+for k in $(seq -w 2 23); do mkdir -p "module$k"; done
+```
 
 ## All things `grep`...
 
@@ -376,7 +391,6 @@ Lastly, we need to start cron upon container start:
 ```bash
 CMD cron && my-awesome-executable
 ```
-
 
 
 ## Using `jq`
